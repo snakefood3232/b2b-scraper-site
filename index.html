@@ -1,0 +1,55 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NeonLead — B2B Scraper</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>NeonLead — B2B Scraper</h1>
+    <p class="note">Minimal UI. Works with API at <code id="apiBase"></code>. Edit <code>web/script.js</code> to set your API URL for Render.</p>
+    <section class="card">
+      <h2>Search (optional)</h2>
+      <div class="row">
+        <input id="query" placeholder="e.g., roofing contractors in Tampa" />
+        <button id="searchBtn">Search via API</button>
+      </div>
+      <p class="muted">Requires <code>BING_SEARCH_KEY</code> or <code>SERPAPI_KEY</code> on the API. Or skip this and upload a CSV of URLs.</p>
+    </section>
+    <section class="card">
+      <h2>Seed URLs</h2>
+      <div class="row">
+        <textarea id="urls" placeholder="One URL per line"></textarea>
+        <div class="col">
+          <input type="file" id="csvfile" accept=".csv" />
+          <button id="loadCsv">Load CSV</button>
+        </div>
+      </div>
+    </section>
+    <section class="card">
+      <h2>Options</h2>
+      <div class="row">
+        <label><input type="checkbox" id="render" /> Render JS (Playwright)</label>
+        <label>Concurrency <input type="number" id="concurrency" value="5" min="1" max="10"/></label>
+        <label>Timeout (ms) <input type="number" id="timeout" value="12000" min="2000" step="1000"/></label>
+        <label><input type="checkbox" id="queue" /> Queue mode (Redis/Worker)</label>
+      </div>
+      <button id="scrapeBtn">Scrape Selected</button>
+    </section>
+    <section class="card">
+      <h2>Results</h2>
+      <div id="status"></div>
+      <table id="results">
+        <thead>
+          <tr><th>Org</th><th>URL</th><th>Title</th><th>Emails</th><th>Phones</th><th>Socials</th><th>OK</th><th>Error</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <button id="exportBtn">Export CSV</button>
+    </section>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>

@@ -30,9 +30,6 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-neonlead}
       REDIS_URL: redis://redis:6379/0
-      # Optional search keys:
-      # BING_SEARCH_KEY: ${BING_SEARCH_KEY}
-      # SERPAPI_KEY: ${SERPAPI_KEY}
     depends_on:
       db:
         condition: service_healthy
