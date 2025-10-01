@@ -1,4 +1,4 @@
-const API = 'http://localhost:8000';
+const API = 'https://b2b-scraper-site.onrender.com';
 document.getElementById('apiBase').textContent = API;
 const $ = (id) => document.getElementById(id);
 const statusEl = $('status');
@@ -144,3 +144,4 @@ $('exportBtn').onclick = async () => {
   URL.revokeObjectURL(a.href);
   a.remove();
 };
+
