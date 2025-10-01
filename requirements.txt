@@ -1,0 +1,13 @@
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+pydantic==2.9.2
+requests==2.32.3
+beautifulsoup4==4.12.3
+tldextract==5.1.2
+python-multipart==0.0.12
+playwright==1.47.0
+playwright-stealth==1.0.6
+redis==5.0.7
+rq==1.16.2
+SQLAlchemy==2.0.34
+psycopg2-binary==2.9.9
