@@ -1,7 +1,8 @@
-﻿import io, csv
+﻿from __future__ import annotations
+
+import io, csv
 from fastapi.responses import Response
 from fastapi import Body
-from __future__ import annotations
 import os, io, csv, uuid, asyncio
 from typing import List, Dict, Any
 from fastapi import FastAPI, HTTPException
@@ -14,6 +15,7 @@ from sqlalchemy.orm import Session
 from redis import Redis
 from rq import Queue
 import httpx
+
 
 app = FastAPI(title="NeonLead B2B Scraper", openapi_url="/openapi.json")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
