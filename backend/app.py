@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 import os, io, csv, uuid, asyncio
 from typing import List, Dict, Any
 from fastapi import FastAPI, HTTPException
@@ -85,19 +85,33 @@ def api_job_results(job_id: str):
     session.close()
     return {"results": payload}
 
-@app.post("/api/export")
-def api_export(req: ExportRequest):
+@app.post("/api/export", response_class=Response)
+def api_export(payload: dict = Body(...)):
+    rows = payload.get("rows", [])
+    import io, csv  # safe even if already imported above
     buf = io.StringIO()
-    writer = csv.DictWriter(buf, fieldnames=["org","url","title","emails","phones","socials","ok","error"], extrasaction="ignore")
-    writer.writeheader()
-    for row in req.rows:
-        row = dict(row)
-        for key in ["emails","phones","socials"]:
-            if isinstance(row.get(key), list):
-                row[key] = ",".join(row[key])
-        writer.writerow(row)
-    return {"filename": "leads.csv", "content": buf.getvalue()}
+    fieldnames = ["org","url","title","emails","phones","socials","ok","error"]
+    w = csv.DictWriter(buf, fieldnames=fieldnames)
+    w.writeheader()
+    for r in rows:
+        out = {
+            "org":     (r.get("org") or ""),
+            "url":     (r.get("url") or ""),
+            "title":   (r.get("title") or ""),
+            "emails":  ",".join(r.get("emails") or []),
+            "phones":  ",".join(r.get("phones") or []),
+            "socials": ",".join(r.get("socials") or []),
+            "ok":      bool(r.get("ok", False)),
+            "error":   (r.get("error") or ""),
+        }
+        w.writerow(out)
 
+    csv_text = buf.getvalue()
+    return Response(
+        content=csv_text,
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": 'attachment; filename="leads.csv"'}
+    )
 @app.post("/api/search")
 async def api_search(req: SearchRequest):
     urls = []
@@ -127,3 +141,4 @@ async def api_search(req: SearchRequest):
             seen.add(u); out.append(u)
         if len(out) >= req.count: break
     return {"urls": out}
+
