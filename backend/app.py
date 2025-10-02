@@ -1,4 +1,6 @@
-﻿from __future__ import annotations
+﻿from fastapi.responses import Response
+from fastapi import Body
+from __future__ import annotations
 import os, io, csv, uuid, asyncio
 from typing import List, Dict, Any
 from fastapi import FastAPI, HTTPException
@@ -88,7 +90,6 @@ def api_job_results(job_id: str):
 @app.post("/api/export", response_class=Response)
 def api_export(payload: dict = Body(...)):
     rows = payload.get("rows", [])
-    import io, csv  # safe even if already imported above
     buf = io.StringIO()
     fieldnames = ["org","url","title","emails","phones","socials","ok","error"]
     w = csv.DictWriter(buf, fieldnames=fieldnames)
@@ -105,7 +106,6 @@ def api_export(payload: dict = Body(...)):
             "error":   (r.get("error") or ""),
         }
         w.writerow(out)
-
     csv_text = buf.getvalue()
     return Response(
         content=csv_text,
@@ -141,4 +141,5 @@ async def api_search(req: SearchRequest):
             seen.add(u); out.append(u)
         if len(out) >= req.count: break
     return {"urls": out}
+
 
