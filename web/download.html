@@ -1,0 +1,93 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Download Leads CSV</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { font-family: system-ui, Arial, sans-serif; margin: 24px; }
+    textarea { width: 100%; box-sizing: border-box; }
+    button { padding: 8px 14px; }
+    #status { margin-left: 8px; color: #666; }
+  </style>
+</head>
+<body>
+  <h1>Download CSV</h1>
+
+  <p>Paste/adjust your rows JSON below, then click <b>Download CSV</b>.</p>
+
+  <textarea id="rowsInput" rows="10">[
+  {
+    "org": "test",
+    "url": "https://example.com",
+    "title": "x",
+    "emails": ["a@example.com"],
+    "phones": ["555-0100"],
+    "socials": ["https://twitter.com/example"],
+    "ok": true,
+    "error": ""
+  }
+]</textarea>
+
+  <div style="margin-top: 12px;">
+    <button id="dlBtn">Download CSV</button>
+    <span id="status"></span>
+  </div>
+
+  <script>
+  // Use absolute API base since your UI may be on a different origin.
+  const API_BASE = 'https://api.pfasclaimhelp.org';
+
+  async function downloadCsv(rows) {
+    const res = await fetch(`${API_BASE}/api/export`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rows })
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      throw new Error(`Export failed (${res.status}): ${text}`);
+    }
+
+    // Try to use server-provided filename if present
+    const disp = res.headers.get('content-disposition') || '';
+    const match = /filename="([^"]+)"/i.exec(disp);
+    const filename = match?.[1] || 'leads.csv';
+
+    const blob = await res.blob();
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  const btn = document.getElementById('dlBtn');
+  const statusEl = document.getElementById('status');
+
+  btn.addEventListener('click', async () => {
+    try {
+      statusEl.textContent = 'Preparing...';
+      btn.disabled = true;
+
+      const raw = document.getElementById('rowsInput').value;
+      const rows = JSON.parse(raw);
+
+      if (!Array.isArray(rows)) throw new Error('JSON must be an array of rows');
+      await downloadCsv(rows);
+      statusEl.textContent = 'Downloaded ✅';
+    } catch (err) {
+      console.error(err);
+      statusEl.textContent = 'Error: ' + (err?.message || err);
+      alert(statusEl.textContent);
+    } finally {
+      btn.disabled = false;
+      setTimeout(() => (statusEl.textContent = ''), 4000);
+    }
+  });
+  </script>
+</body>
+</html>
