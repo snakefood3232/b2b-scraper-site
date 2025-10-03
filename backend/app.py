@@ -239,3 +239,32 @@ def api_export(payload: dict = Body(...)):
         media_type="text/csv; charset=utf-8",
         headers={"Content-Disposition": 'attachment; filename="leads.csv"'}
     )
+
+@app.post("/api/export", response_class=Response, include_in_schema=True)
+def export_csv(payload: dict = Body(...)):
+    # Return a real CSV file (no JSON wrapper)
+    buf = io.StringIO()
+    fieldnames = ["org","url","title","emails","phones","socials","ok","error"]
+    w = csv.DictWriter(buf, fieldnames=fieldnames)
+    w.writeheader()
+
+    rows = (payload or {}).get("rows", [])
+    for r in rows:
+        out = {
+            "org":     (r.get("org") or ""),
+            "url":     (r.get("url") or ""),
+            "title":   (r.get("title") or ""),
+            "emails":  ",".join(r.get("emails") or []),
+            "phones":  ",".join(r.get("phones") or []),
+            "socials": ",".join(r.get("socials") or []),
+            "ok":      bool(r.get("ok", False)),
+            "error":   (r.get("error") or ""),
+        }
+        w.writerow(out)
+
+    csv_text = buf.getvalue()
+    return Response(
+        content=csv_text,
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": 'attachment; filename="leads.csv"'}
+    )
