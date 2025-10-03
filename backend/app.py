@@ -10,6 +10,7 @@ from typing import Any, Dict, List
 import httpx
 from fastapi import Body, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from fastapi.responses import Response
 from redis import Redis
 from rq import Queue
@@ -40,6 +41,7 @@ app.add_middleware(
 )
 
 init_db()
+app.mount("/web", StaticFiles(directory="web", html=True), name="web")
 
 REDIS_URL = os.getenv("REDIS_URL")
 BING_KEY = os.getenv("BING_SEARCH_KEY")

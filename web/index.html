@@ -1,55 +1,207 @@
-<!doctype html>
-<html>
+﻿<!doctype html>
+<html lang="en">
 <head>
   <meta charset="utf-8" />
+  <title>NeonLead Scraper</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>NeonLead — B2B Scraper</title>
-  <link rel="stylesheet" href="styles.css" />
+  <style>
+    :root { font-family: system-ui, Arial, sans-serif; }
+    body { margin: 0; padding: 24px; background: #0b1220; color: #e7eefc; }
+    .card { max-width: 960px; margin: 0 auto; background: #111a2e; border: 1px solid #1f2c4a; border-radius: 16px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.35); }
+    h1 { margin: 0 0 16px; font-size: 22px; }
+    label { display:block; margin: 10px 0 6px; color:#a8c1ff; font-size: 13px; }
+    textarea, input[type="number"] {
+      width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid #253354;
+      background: #0e1730; color: #e7eefc; outline: none;
+    }
+    .row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 12px; }
+    .row .cell { background: #0e1730; border: 1px solid #253354; border-radius: 10px; padding: 10px 12px; display: flex; align-items: center; gap: 8px; }
+    .row input[type="checkbox"] { transform: scale(1.2); }
+    .actions { margin-top: 14px; display: flex; gap: 12px; }
+    button {
+      padding: 10px 14px; border-radius: 10px; border: 1px solid #3152ff; background: #1b2b6a;
+      color: #e7eefc; cursor: pointer; font-weight: 600;
+    }
+    button.secondary { border-color:#2a3e78; background:#14214a; }
+    button:disabled { opacity: .55; cursor: not-allowed; }
+    .status { margin-top: 10px; min-height: 22px; color: #a8c1ff; font-size: 13px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 13px; }
+    th, td { border-bottom: 1px solid #22325a; padding: 8px 6px; vertical-align: top; }
+    th { text-align: left; color: #a8c1ff; font-weight: 600; }
+    .pill { display:inline-block; padding: 2px 6px; border-radius: 999px; border: 1px solid #2a3e78; background: #0e1730; margin-right: 6px; }
+  </style>
 </head>
 <body>
-  <div class="container">
-    <h1>NeonLead — B2B Scraper</h1>
-    <p class="note">Minimal UI. Works with API at <code id="apiBase"></code>. Edit <code>web/script.js</code> to set your API URL for Render.</p>
-    <section class="card">
-      <h2>Search (optional)</h2>
-      <div class="row">
-        <input id="query" placeholder="e.g., roofing contractors in Tampa" />
-        <button id="searchBtn">Search via API</button>
-      </div>
-      <p class="muted">Requires <code>BING_SEARCH_KEY</code> or <code>SERPAPI_KEY</code> on the API. Or skip this and upload a CSV of URLs.</p>
-    </section>
-    <section class="card">
-      <h2>Seed URLs</h2>
-      <div class="row">
-        <textarea id="urls" placeholder="One URL per line"></textarea>
-        <div class="col">
-          <input type="file" id="csvfile" accept=".csv" />
-          <button id="loadCsv">Load CSV</button>
-        </div>
-      </div>
-    </section>
-    <section class="card">
-      <h2>Options</h2>
-      <div class="row">
-        <label><input type="checkbox" id="render" /> Render JS (Playwright)</label>
-        <label>Concurrency <input type="number" id="concurrency" value="5" min="1" max="10"/></label>
-        <label>Timeout (ms) <input type="number" id="timeout" value="12000" min="2000" step="1000"/></label>
-        <label><input type="checkbox" id="queue" /> Queue mode (Redis/Worker)</label>
-      </div>
-      <button id="scrapeBtn">Scrape Selected</button>
-    </section>
-    <section class="card">
-      <h2>Results</h2>
-      <div id="status"></div>
-      <table id="results">
-        <thead>
-          <tr><th>Org</th><th>URL</th><th>Title</th><th>Emails</th><th>Phones</th><th>Socials</th><th>OK</th><th>Error</th></tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-      <button id="exportBtn">Export CSV</button>
-    </section>
+  <div class="card">
+    <h1>NeonLead Scraper</h1>
+
+    <label for="urls">URLs to scrape (one per line)</label>
+    <textarea id="urls" rows="6" placeholder="https://example.com
+https://another-site.com"></textarea>
+
+    <div class="row">
+      <div class="cell"><input id="render" type="checkbox" /><label for="render" style="margin:0;">Use headless browser (Playwright)</label></div>
+      <div class="cell"><label for="conc" style="margin:0 8px 0 0;">Concurrency</label><input id="conc" type="number" min="1" max="10" value="5" /></div>
+      <div class="cell"><label for="timeout" style="margin:0 8px 0 0;">Timeout (ms)</label><input id="timeout" type="number" min="1000" step="500" value="20000" /></div>
+    </div>
+
+    <div class="actions">
+      <button id="btnScrape">Scrape</button>
+      <button id="btnDownload" class="secondary" disabled>Download CSV</button>
+    </div>
+
+    <div id="status" class="status"></div>
+    <div id="resultsWrap"></div>
   </div>
-  <script src="script.js"></script>
+
+<script>
+(() => {
+  const $ = (s) => document.querySelector(s);
+  const $$ = (s) => Array.from(document.querySelectorAll(s));
+  const el = {
+    urls: $("#urls"),
+    render: $("#render"),
+    conc: $("#conc"),
+    timeout: $("#timeout"),
+    btnScrape: $("#btnScrape"),
+    btnDownload: $("#btnDownload"),
+    status: $("#status"),
+    resultsWrap: $("#resultsWrap"),
+  };
+
+  let lastResults = [];
+
+  const setStatus = (msg) => { el.status.textContent = msg || ""; };
+
+  function renderTable(rows) {
+    if (!rows || !rows.length) {
+      el.resultsWrap.innerHTML = "<p>No results yet.</p>";
+      return;
+    }
+
+    const escape = (s) => (s ?? "").toString()
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;");
+
+    const html = `
+      <table>
+        <thead>
+          <tr>
+            <th>URL</th>
+            <th>Title/Org</th>
+            <th>Emails</th>
+            <th>Phones</th>
+            <th>Socials</th>
+            <th>OK</th>
+            <th>Error</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(r => `
+            <tr>
+              <td>${escape(r.url || "")}</td>
+              <td>
+                ${escape(r.title || "")}
+                ${r.org ? `<div class="pill">${escape(r.org)}</div>` : ""}
+              </td>
+              <td>${(r.emails || []).map(e => `<div class="pill">${escape(e)}</div>`).join("")}</td>
+              <td>${(r.phones || []).map(p => `<div class="pill">${escape(p)}</div>`).join("")}</td>
+              <td>${(r.socials || []).map(s => `<div class="pill">${escape(s)}</div>`).join("")}</td>
+              <td>${r.ok ? "✅" : "❌"}</td>
+              <td>${escape(r.error || "")}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    `;
+    el.resultsWrap.innerHTML = html;
+  }
+
+  async function scrape() {
+    const urls = el.urls.value.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+    if (!urls.length) {
+      setStatus("Enter at least one URL.");
+      return;
+    }
+    el.btnScrape.disabled = true;
+    el.btnDownload.disabled = true;
+    setStatus("Scraping…");
+
+    const body = {
+      urls,
+      render: !!el.render.checked,
+      concurrency: Math.max(1, Math.min(10, parseInt(el.conc.value || "5", 10))),
+      timeout_ms: Math.max(1000, parseInt(el.timeout.value || "20000", 10))
+    };
+
+    try {
+      const res = await fetch("/api/scrape", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const t = await res.text();
+        throw new Error(t || ("HTTP " + res.status));
+      }
+      const data = await res.json();
+      lastResults = data.results || [];
+      renderTable(lastResults);
+      setStatus(`Done. ${lastResults.length} row(s).`);
+      el.btnDownload.disabled = lastResults.length === 0;
+    } catch (err) {
+      console.error(err);
+      setStatus("Error: " + (err?.message || err));
+    } finally {
+      el.btnScrape.disabled = false;
+    }
+  }
+
+  async function downloadCsv() {
+    if (!lastResults.length) return;
+    setStatus("Preparing CSV…");
+
+    const rows = lastResults.map(r => ({
+      org: r.org || "",
+      url: r.url || "",
+      title: r.title || "",
+      emails: Array.isArray(r.emails) ? r.emails : [],
+      phones: Array.isArray(r.phones) ? r.phones : [],
+      socials: Array.isArray(r.socials) ? r.socials : [],
+      ok: !!r.ok,
+      error: r.error || ""
+    }));
+
+    try {
+      const res = await fetch("/api/export", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rows })
+      });
+      if (!res.ok) {
+        const t = await res.text();
+        throw new Error(t || ("HTTP " + res.status));
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "leads.csv";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      setStatus("CSV downloaded.");
+    } catch (err) {
+      console.error(err);
+      setStatus("Error generating CSV: " + (err?.message || err));
+    }
+  }
+
+  $("#btnScrape").addEventListener("click", scrape);
+  $("#btnDownload").addEventListener("click", downloadCsv);
+})();
+</script>
 </body>
 </html>
